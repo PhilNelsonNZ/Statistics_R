@@ -1,0 +1,205 @@
+---
+title: "Statistical inference with the GSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+
+```
+
+### Load data
+
+```{r load-data}
+load("gss.Rdata")
+
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+The observations are randomly collected from adults living in households in the United States.  The GSS samples are drawn using an area probability design that randomly selects respondents in households across the United States to take part in the survey.  It includes a mix from urban, suburban and rural geographic areas.  Participation is voluntary and so this data is subject to response bias.  The dataset comprises 29 years of samples taken from 1973 to 2012 and the number of those sampled in each year has some variation in exact sample size (target 1500, with more than one sample from 1994 onwards (typically 2 samples, but three samples in year 2006)).  For this analysis I have selected the variables "year" (29 years) and "degree"" (5 levels of education) in the GSS dataset as the categorical variables to be analysed.
+
+Non response bias: the GSS survey is conducted face to face with an in-person interview by NORC at the University of Chicago, this means that respondents will have to travel and take time to participate and this may impact the non-response bias. This data can be generalised to the population because it uses random sampling and it also a high volume of cases in the dataset 57061 aggregate and approximately 1500 samples per batch (see above).  A convenience sample is a type of non-probability sampling method where the sample is taken from a group of people easy to contact or to reach.  This survey does not suffer from convenience bias due to the approach taken.
+
+Causality cannot be established when comparing any variables to each-other because this is an observational study.  However this sample data can be used to examine association / correlations between variables.
+
+* * *
+
+## Part 2: Research question
+
+There appears to be a global trend of increasing educational level over time: 
+https://ourworldindata.org/global-rise-of-education#attainment-by-level
+
+So it would be interesting to know if the USA is also following the global general trend seen around the world.  The null hypothesis used in this study is that there is no relationship between the two categorical variables year ("year") and level of educational attainment ("degree").
+
+According to this link given above "Education is widely accepted to be a fundamental resource, both for individuals and societies....Education at higher levels, mainly secondary and tertiary, is becoming increasingly important around the world" this is a motivation for selecting these variables for study.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+To tally up the counts for the two categorical variables "year" and "degree"" I use the table command to examine the numbers in the dataset.  Note that the lowest cell count is 17 (see Inference section cell must have at least 5 cases as a condition for Chi Squared Independence Test).
+
+Summary Statistics:
+
+The code below creates for tbl_deg_year creates a count of year by degree type:
+
+```{r}
+tbl_deg_year <- table(gss$year, gss$degree)
+tbl_deg_year
+```
+
+This shows the proportion of each type across all the samples in the dataset which will be used to calculated the expected values for the Chi Squared Test:
+```{r}
+prop.deg <- colMeans(tbl_deg_year)/sum(colMeans(tbl_deg_year))
+prop.deg
+
+```
+
+This prop.deg information above is used in the "Inference" Section later on in the analysis to manually calculate expected values as input to Chi squared for the Chi Squared independence test.
+
+As discussed above in Part 1 Data there are 29 years of sampling and the approach to how many samples were taken changed over that period.  The barplot below visually summarises the total samples taken per year:
+
+```{r}
+year.total <- rowSums(tbl_deg_year)
+year.total
+barplot(year.total,xlab = "Year", ylab = "Count", main = "Total samples per year")
+```
+
+Cross-check: These absolute numbers match the expected levels in the http://gss.norc.org/Pages/Faq.aspx question "How many people are interviewed for each GSS?" and are as expected.
+
+Following from the barplot above a more detailed visualisation of this data looks at the samples by degree and by year.  The year is on the x-axis (explanatory) and the absolute count is on the y axis (response) variables.  
+
+```{r}
+ggplot(gss, aes(x = factor(year), ..count.. )) + geom_bar(aes(fill=degree), colour = "black") + labs(title="Count of educational attainment (degree) type versus Year", x = "Year") + theme(axis.text.x = element_text(size=8, angle=90))
+```
+
+The bar plot above indicates that there may be some differences but as the sample sizes are different from year to year but it is difficult to see the proportions of each degree level due to the changes in annual sample aggregates (1972-1993 vs 1994-2012).
+
+To explore further the normalized barplot below is created to examine the proportional levels of education attained (degree) by year.
+
+```{r}
+ggplot(gss, aes(x = factor(year), ..count.. )) + geom_bar(aes(fill=degree), colour = "black", position = "fill") + labs(title="Count of educational attainment (degree) type versus Year", x = "Year", y = "Proportion") + theme(axis.text.x = element_text(size=8, angle=90))
+```
+
+This bar plot above shows the ratios using a normalised plot. Visually this plot indicates there is a difference in the proportions of educational attainment (degree) as this changes over the years. The year (year) is the explanatory variable (x-axis) and the educational attainment (degree) is the response variable (y-axis).
+
+
+* * *
+
+## Part 4: Inference
+
+Hypothesis:
+This inference section examines the chi squared test of independence to confirm or reject the null hypothesis.  The two selected random variables "year" and "degree" are called independent if the probability distribution of one variable is not affected by the presence of the other. The null hypothesis as stated in an earlier section is that there is no relationship (i.e. independence) between sampling year ("year") and level of educational attainment ("degree").
+
+Conditions:
+Check for the conditions for the Chi-squared test:
+
+1. Independence - YES
+
+a. Sampled observations must be independent - YES
+
+b. Random sample/assignment - YES
+
+c. If sampling without replacement the sample must be less than 10% of the population - Yes
+
+d. Each case only contributes one cell to a table - YES
+
+2 Sample Size - each particular scenario a cell must have at least 5 expected cases (cell in the table "tbl_deg_year" - see EDA section table "tbl_deg_year"" the lowest value is 17) - YES
+
+
+Method:
+
+The method used for Inference in this study is the Chi Squared Test of Independence using R calculation chisq.test.  I found the chisq.test function being applied to chi-squared tests (but NOT the GSS dataset or these variables) at the following source link:
+http://www.r-tutor.com/elementary-statistics/goodness-fit/chi-squared-test-independence
+
+In addition to confirm the method above is correct I have also calculated Chi Squared "manually" (really semi-manually using some more step by step calculations in R) to evaluate the relationship between the two categorical variables "year"" and "degree". It is performed on the (tbl_deg_year) set created and discussed in the Exploratory Data Analysis section.
+
+Inference:
+
+The chisq.test function in R is applied to the table tbl_deg_year extracted from GSS dataset and is shown as a table of numbers and visually explored in Part 3: Exploratory Data Analysis.
+
+```{r}
+chisq.test(tbl_deg_year)
+
+```
+
+Check: 
+
+Note that from the "tbl_deg_year" created in the exploratory data analysis section we can see that there are 5 columns (degree) and 29 rows (year).  
+
+```{r}
+unique(gss$year)
+unique(gss$degree)
+```
+
+The degrees of freedom calculated in a chi squared test of independence is df = (R - 1) x (C - 1) = (29 - 1) x (5 - 1) = 112 degrees of freedom.  29 years and 5 Degree levels.
+
+Manual Check that Chi Squared Test is correct:
+
+Below is a manual check of the R code above (not relying on the chisq.test function) and it follows the Duke lectures approach to calculate Chi squared for Independence manually. This section calculates the expected values based on the total expected values over all the years of data. The proportion from Part 3: EDA is copied in the next row here: 
+prop.deg <- colMeans(tbl_deg_year)/sum(colMeans(tbl_deg_year)) and prop.deg is used to create the expected level in exp_matdf and tbl_exp in the R code below.
+
+In this section a matrix and then dataframe is created from year.total as rows and prop.deg as columns multipliers matrix.  "expected" is the year list repeated 5 times. "exp_mat" is the row totals repeated in 5 columns.
+
+```{r}
+expected <- rep(year.total, 5) #repeat the year total 5 times
+exp_mat <- matrix(expected, nrow = 29, ncol=5,dimnames = list(rownames(tbl_deg_year),colnames(tbl_deg_year))) # create a matrix from the vector
+# need to multiply each column by the correct proportion
+exp_matdf <- as.data.frame(exp_mat)
+#each expected column is calculated on per column basis in sequence prop.deg is the proportion of educational level across all years (see previous Exploratory Data Analysis)
+exp_matdf$`Lt High School` <- exp_matdf$`Lt High School`*prop.deg[1]
+exp_matdf$`High School` <- exp_matdf$`High School`*prop.deg[2]
+exp_matdf$`Junior College` <- exp_matdf$`Junior College`*prop.deg[3]
+exp_matdf$Bachelor <- exp_matdf$Bachelor*prop.deg[4]
+exp_matdf$Graduate <- exp_matdf$Graduate*prop.deg[5]
+exp_matdf <- round(exp_matdf,2) #round to two decimal places 
+
+#the expected count value is calculated for each
+tbl_exp <- as.matrix(exp_matdf)
+delta <- tbl_deg_year - tbl_exp #shows the difference between the actual value and the expected value
+delta
+element_chisq <- delta^2/tbl_exp
+#the last line above is in preparation for the manual check against the equation
+chi_sqsum <- sum(element_chisq)
+chi_sqsum #this double checks the chi squared value manually using the matrix calculated in the exploratory data analysis section
+```
+
+The delta table shown above which shows the difference between the observed value and the expected value (Observed - Expected) which has been calculated using the R code above and rounded to two decimal places.  Note the delta (not squared like Chi squared) is shown to give an indication that the changes are not random but appear to have a pattern.
+
+Final Chi Squared calculation check: 
+
+Here the manually calculated value for Chisquare "chi_sqsum" is 2910 when I calculate delta using 2 decimal places and it gives the same value as the R calculated chisq.test = 2910.
+
+Results interpretation:
+
+This small p-value < 2.2e-16 means that the null hypothesis should be rejected in favour of the alternative hypothesis that there is a relationship between year and educational attainment level "degree".  This is however an observational study only and it is not possible to deduce a causal relationship.  It is noted that the general trend to increasing higher levels of education is in line with Global trends - https://ourworldindata.org/global-rise-of-education#attainment-by-level.
+
+Density Graph for Chi Square:
+
+The very small p-value means that visually it is far to the right of the chi squared distrbution chart and so difficult to visualise as the number is so small.  The chart looks something like this but the value of 2910.3 is far to the right of the chart and cannot be seen.
+
+```{r}
+x <- pchisq(2910.3, 112, lower.tail=FALSE)
+curve( dchisq(x, df=112), col='red', main = "Chi-Square Density Graph",
+          from=50,to=200 )
+```
+
+Only the right hand tail of the interval is relevant to the Chi Squared Test of Independence.
+
+
+
